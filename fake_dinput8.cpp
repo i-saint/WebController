@@ -14,14 +14,14 @@ static GetDeviceStateT orig_GetDeviceState;
 static HRESULT __stdcall fake_GetDeviceState(IDirectInputDevice8 *dev, DWORD size, LPVOID data)
 {
     HRESULT r = orig_GetDeviceState(dev, size, data);
-    if(WebController_GetConfig()->override_dinput8) {
+    if(wcGetConfig()->override_dinput8) {
         if(FAILED(r)) { memset(data, 0, size); }
-        const WebControllerData::Pad &vpad = WebController_GetData()->pad[0];
+        const wcInputData::Pad &vpad = wcGetData()->pad[0];
         if(size==sizeof(DIJOYSTATE)) {
             DIJOYSTATE &state = *(DIJOYSTATE*)data;
             state.lX = abs(vpad.x1+INT16_MIN)>abs(state.lX+INT16_MIN) ? vpad.x1 : state.lX;
             state.lY = abs(vpad.y1+INT16_MIN)>abs(state.lY+INT16_MIN) ? vpad.y1 : state.lY;
-            for(int32 i=0; i<WebControllerData::Pad::MaxButtons; ++i) {
+            for(int32 i=0; i<wcInputData::Pad::MaxButtons; ++i) {
                 state.rgbButtons[i] |= vpad.buttons[i];
             }
         }
@@ -31,7 +31,7 @@ static HRESULT __stdcall fake_GetDeviceState(IDirectInputDevice8 *dev, DWORD siz
             state.lY = abs(vpad.y1+INT16_MIN)>abs(state.lY+INT16_MIN) ? vpad.y1 : state.lY;
             LONG trigger = vpad.trigger1 > vpad.trigger2 ? -vpad.trigger1 : vpad.trigger2;
             state.lZ = abs(trigger)>0x100 ? INT16_MAX+trigger : state.lZ;
-            for(int32 i=0; i<WebControllerData::Pad::MaxButtons; ++i) {
+            for(int32 i=0; i<wcInputData::Pad::MaxButtons; ++i) {
                 state.rgbButtons[i] |= vpad.buttons[i];
             }
         }
@@ -58,12 +58,12 @@ static HRESULT WINAPI fake_DirectInput8Create(HINSTANCE hinst, DWORD dwVersion, 
         void **&vftable = ((void***)(*ppvOut))[0];
         if(orig_CreateDevice==NULL) { (void*&)orig_CreateDevice=vftable[3]; }
         vftable[3] = &fake_CreateDevice;
-        WebController_StartServer();
+        wcStartServer();
     }
     return r;
 }
 
-static FuncInfo g_dinput8_funcs[] = {
+static wcFuncInfo g_dinput8_funcs[] = {
     {"DirectInput8Create", 0, (void*)&fake_DirectInput8Create, (void**)&orig_DirectInput8Create},
 };
-OverrideInfo g_dinput8_overrides = {"dinput8.dll", _countof(g_dinput8_funcs), g_dinput8_funcs};
+wcOverrideInfo g_dinput8_overrides = {"dinput8.dll", _countof(g_dinput8_funcs), g_dinput8_funcs};

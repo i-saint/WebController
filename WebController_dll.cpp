@@ -2,11 +2,11 @@
 #include "WebController.h"
 #include "WebController_Internal.h"
 
-extern OverrideInfo g_user32_overrides;
-extern OverrideInfo g_winmm_overrides;
-extern OverrideInfo g_dinput8_overrides;
-extern OverrideInfo g_xinput_overrides;
-static OverrideInfo *g_overrides[] = {&g_user32_overrides, &g_winmm_overrides, &g_dinput8_overrides, &g_xinput_overrides};
+extern wcOverrideInfo g_user32_overrides;
+extern wcOverrideInfo g_winmm_overrides;
+extern wcOverrideInfo g_dinput8_overrides;
+extern wcOverrideInfo g_xinput_overrides;
+static wcOverrideInfo *g_overrides[] = {&g_user32_overrides, &g_winmm_overrides, &g_dinput8_overrides, &g_xinput_overrides};
 
 typedef HMODULE (WINAPI *LoadLibraryAT)(LPCSTR lpFileName);
 typedef HMODULE (WINAPI *LoadLibraryWT)(LPWSTR lpFileName);
@@ -25,11 +25,11 @@ static void OverrideExports(HMODULE mod)
         if(pDLLpath[i]=='\\' || pDLLpath[i]=='/') { pDLLName = pDLLpath+(i+1); }
     }
     for(size_t mi=0; mi<_countof(g_overrides); ++mi) {
-        OverrideInfo &oinfo = *g_overrides[mi];
+        wcOverrideInfo &oinfo = *g_overrides[mi];
         std::regex reg(oinfo.dllname, std::regex::ECMAScript|std::regex::icase);
         if(std::regex_match(pDLLName, reg)) {
             for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
-                FuncInfo &finfo = oinfo.funcs[fi];
+                wcFuncInfo &finfo = oinfo.funcs[fi];
                 if(finfo.name!=NULL) {
                     void *orig = OverrideDLLExportByName(mod, finfo.name, finfo.func);
                     if(*finfo.func_orig==NULL) { *finfo.func_orig=orig; }
@@ -42,11 +42,11 @@ static void OverrideExports(HMODULE mod)
 static void OverrideImports()
 {
     for(size_t mi=0; mi<_countof(g_overrides); ++mi) {
-        OverrideInfo &oinfo = *g_overrides[mi];
+        wcOverrideInfo &oinfo = *g_overrides[mi];
         EachImportFunctionInEveryModule(oinfo.dllname,
             [&](const char *funcname, void *&func) {
                 for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
-                    FuncInfo &finfo = oinfo.funcs[fi];
+                    wcFuncInfo &finfo = oinfo.funcs[fi];
                     if(finfo.name==NULL) { continue; }
                     if(strcmp(funcname, finfo.name)==0) {
                         if(*finfo.func_orig==NULL) { *finfo.func_orig=func; }
@@ -56,7 +56,7 @@ static void OverrideImports()
         },
             [&](DWORD ordinal, void *&func) {
                 for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
-                    FuncInfo &finfo = oinfo.funcs[fi];
+                    wcFuncInfo &finfo = oinfo.funcs[fi];
                     if(finfo.ordinal==0) { continue; }
                     if(finfo.ordinal==ordinal) {
                         if(*finfo.func_orig==NULL) { *finfo.func_orig=func; }

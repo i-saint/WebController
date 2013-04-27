@@ -10,9 +10,9 @@ static GetKeyboardStateT orig_GetKeyboardState;
 static BOOL WINAPI fake_GetCursorInfo(PCURSORINFO pci)
 {
     BOOL ret = orig_GetCursorInfo(pci);
-    if(WebController_GetConfig()->override_user32) {
-        WebController_StartServer();
-        const WebControllerData *input = WebController_GetData();
+    if(wcGetConfig()->override_user32) {
+        wcStartServer();
+        const wcInputData *input = wcGetData();
         // todo
     }
     return ret;
@@ -21,9 +21,9 @@ static BOOL WINAPI fake_GetCursorInfo(PCURSORINFO pci)
 static BOOL WINAPI fake_GetKeyboardState(PBYTE lpKeyState)
 {
     BOOL ret = orig_GetKeyboardState(lpKeyState);
-    if(WebController_GetConfig()->override_user32) {
-        WebController_StartServer();
-        const WebControllerData *input = WebController_GetData();
+    if(wcGetConfig()->override_user32) {
+        wcStartServer();
+        const wcInputData *input = wcGetData();
         for(int i=0; i<256; ++i) {
             lpKeyState[i] |= (input->key.keys[i] & 0x80);
         }
@@ -31,8 +31,8 @@ static BOOL WINAPI fake_GetKeyboardState(PBYTE lpKeyState)
     return ret;
 }
 
-static FuncInfo g_user32_funcs[] = {
+static wcFuncInfo g_user32_funcs[] = {
     {"GetCursorInfo", 0, (void*)&fake_GetCursorInfo, (void**)&orig_GetCursorInfo},
     {"GetKeyboardState", 0, (void*)&fake_GetKeyboardState, (void**)&orig_GetKeyboardState},
 };
-OverrideInfo g_user32_overrides = {"user32.dll", _countof(g_user32_funcs), g_user32_funcs};
+wcOverrideInfo g_user32_overrides = {"user32.dll", _countof(g_user32_funcs), g_user32_funcs};

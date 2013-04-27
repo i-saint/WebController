@@ -25,7 +25,6 @@
 #include "Poco/Net/SocketAddress.h"
 #include "WebController.h"
 #include "WebController_Internal.h"
-#include <functional>
 
 
 struct InputServerConfig
@@ -50,7 +49,7 @@ public:
     ~InputServer();
     void start();
     void stop();
-    WebControllerData& getState();
+    wcInputData& getState();
 
     bool endFlag() const { return m_end_flag; }
 
@@ -61,7 +60,7 @@ private:
     InputServerConfig m_conf;
     bool m_end_flag;
 
-    WebControllerData m_state;
+    wcInputData m_state;
 };
 
 
@@ -79,22 +78,14 @@ static const MIME s_mime_types[] = {
     {".jpg",  "image/jpeg"},
 };
 
-static const char* GetModulePath()
+static const char* GetCurrentModuleDirectory()
 {
     static char s_path[MAX_PATH] = {0};
-    if(s_path[0]==0) {
-        HMODULE mod = 0;
-        ::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCTSTR)&GetModulePath, &mod);
-        DWORD size = ::GetModuleFileNameA(mod, s_path, MAX_PATH);
-        while(size>0) {
-            if(s_path[size]=='\\') {
-                s_path[size+1] = '\0';
-                break;
-            }
-            --size;
-        }
+    static char *s_dir = NULL;
+    if(s_dir==NULL) {
+        s_dir = GetModuleDirectory(s_path, MAX_PATH);
     }
-    return s_path;
+    return s_dir;
 }
 
 
@@ -156,7 +147,7 @@ public:
 
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response)
     {
-        WebControllerData *input = WebController_GetData();
+        wcInputData *input = wcGetData();
         if(request.getURI()=="/input") {
             EachInputValue(request, [&](const char *value){
                 int pad, button, v;
@@ -167,7 +158,7 @@ public:
                 else if(sscanf(value, "pad%d_RT:%x", &pad, &v)==2) { input->pad[pad].trigger1=v; }
                 else if(sscanf(value, "pad%d_LT:%x", &pad, &v)==2) { input->pad[pad].trigger2=v; }
                 else if(sscanf(value, "pad%d_button%d:%x", &pad, &button, &v)==3) {
-                    if(button>=0 && button<WebControllerData::Pad::MaxButtons) {
+                    if(button>=0 && button<wcInputData::Pad::MaxButtons) {
                         input->pad[pad].buttons[button] = v;
                     }
                 }
@@ -187,13 +178,13 @@ public:
     virtual Poco::Net::HTTPRequestHandler* createRequestHandler(const Poco::Net::HTTPServerRequest &request)
     {
         if(request.getURI() == "/") {
-            return new FileRequestHandler(std::string(GetModulePath())+std::string(s_root_dir)+"/index.html");
+            return new FileRequestHandler(std::string(GetCurrentModuleDirectory())+std::string(s_root_dir)+"/index.html");
         }
         else if(request.getURI()=="/input") {
             return new InputCommandHandler();
         }
         else {
-            std::string path = std::string(GetModulePath())+std::string(s_root_dir)+request.getURI();
+            std::string path = std::string(GetCurrentModuleDirectory())+std::string(s_root_dir)+request.getURI();
             Poco::File file(path);
             if(file.exists()) {
                 return new FileRequestHandler(path);
@@ -244,7 +235,7 @@ InputServer::InputServer()
     , m_end_flag(false)
 {
     memset(&m_state, 0, sizeof(m_state));
-    for(int i=0; i<WebControllerData::MaxPads; ++i) {
+    for(int i=0; i<wcInputData::MaxPads; ++i) {
         m_state.pad[i].x1 = m_state.pad[i].y1 = m_state.pad[i].x2 = m_state.pad[i].y2 = INT16_MAX;
     }
 }
@@ -285,33 +276,33 @@ void InputServer::stop()
     }
 }
 
-WebControllerData& InputServer::getState()
+wcInputData& InputServer::getState()
 {
     return m_state;
 }
 
-static WebControllerConfig g_conf = {true, true, true, true};
+static wcConfig g_conf = {true, true, true, true};
 
 extern "C" {
 
-__declspec(dllexport) WebControllerConfig*  WebController_GetConfig()
+__declspec(dllexport) wcConfig*  wcGetConfig()
 {
     return &g_conf;
 }
 
-__declspec(dllexport) bool WebController_StartServer()
+__declspec(dllexport) bool wcStartServer()
 {
     InputServer::initializeInstance();
     return true;
 }
 
-__declspec(dllexport) bool WebController_StopServer()
+__declspec(dllexport) bool wcStopServer()
 {
     InputServer::finalizeInstance();
     return true;
 }
 
-__declspec(dllexport) WebControllerData* WebController_GetData()
+__declspec(dllexport) wcInputData* wcGetData()
 {
     if(InputServer *server = InputServer::getInstance()) {
         return &server->getState();

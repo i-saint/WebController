@@ -1,6 +1,7 @@
 ﻿#ifndef WebController_h
 #define WebController_h
 #pragma comment(lib, "psapi.lib")
+#include <windows.h>
 #include <psapi.h>
 #include <stdint.h>
 #include <vector>
@@ -14,7 +15,7 @@ typedef unsigned short  uint16;
 typedef unsigned int    uint32;
 
 extern "C" {
-    struct WebControllerConfig
+    struct wcConfig
     {
         bool override_user32;
         bool override_winmm;
@@ -22,7 +23,7 @@ extern "C" {
         bool override_xinput;
     };
 
-    struct WebControllerData
+    struct wcInputData
     {
         static const int32 MaxPads = 8;
         struct Keyboard
@@ -52,10 +53,10 @@ extern "C" {
         Pad      pad[MaxPads];
     };
 
-    __declspec(dllexport) WebControllerConfig*  WebController_GetConfig();
-    __declspec(dllexport) bool              WebController_StartServer();
-    __declspec(dllexport) bool              WebController_StopServer();
-    __declspec(dllexport) WebControllerData*    WebController_GetData();
+    __declspec(dllexport) wcConfig*     wcGetConfig();
+    __declspec(dllexport) bool          wcStartServer();
+    __declspec(dllexport) bool          wcStopServer();
+    __declspec(dllexport) wcInputData*  wcGetData();
 } // extern "C"
 
 

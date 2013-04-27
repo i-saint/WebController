@@ -11,18 +11,18 @@ static XInputGetKeystrokeT orig_XInputGetKeystroke;
 static DWORD WINAPI fake_XInputGetState(DWORD dwUserIndex, XINPUT_STATE* pState)
 {
     DWORD r = orig_XInputGetState(dwUserIndex, pState);
-    if(WebController_GetConfig()->override_xinput) {
-        WebController_StartServer();
+    if(wcGetConfig()->override_xinput) {
+        wcStartServer();
         if(r!=ERROR_SUCCESS) {
             memset(pState, 0, sizeof(XINPUT_STATE));
         }
-        if(dwUserIndex<WebControllerData::MaxPads) {
+        if(dwUserIndex<wcInputData::MaxPads) {
             XINPUT_GAMEPAD &pad = pState->Gamepad;
-            const WebControllerData::Pad &vpad = WebController_GetData()->pad[dwUserIndex];
+            const wcInputData::Pad &vpad = wcGetData()->pad[dwUserIndex];
             pad.sThumbLX = abs(vpad.x1+INT16_MIN)>abs((int)pad.sThumbLX) ?  vpad.x1+INT16_MIN : pad.sThumbLX;
             pad.sThumbLY = abs(vpad.y1+INT16_MIN)>abs((int)pad.sThumbLY) ?-(vpad.y1-INT16_MAX): pad.sThumbLY;
             for(int32 i=0; i<4; ++i) {
-                pad.wButtons |= (vpad.buttons[i] & 0x80 ? 1 : 0)<<12;
+                pad.wButtons |= (vpad.buttons[i] & 0x80 ? 1 : 0)<<(12+i);
             }
         }
         return ERROR_SUCCESS;
@@ -33,15 +33,15 @@ static DWORD WINAPI fake_XInputGetState(DWORD dwUserIndex, XINPUT_STATE* pState)
 static DWORD WINAPI fake_XInputGetKeystroke(DWORD dwUserIndex, DWORD dwReserved, PXINPUT_KEYSTROKE pKeystroke)
 {
     DWORD ret = orig_XInputGetKeystroke(dwUserIndex, dwReserved, pKeystroke);
-    if(WebController_GetConfig()->override_xinput) {
-        WebController_StartServer();
+    if(wcGetConfig()->override_xinput) {
+        wcStartServer();
         // todo
     }
     return ret;
 }
 
-static FuncInfo g_xinput_funcs[] = {
+static wcFuncInfo g_xinput_funcs[] = {
     {"XInputGetState", 2, (void*)&fake_XInputGetState, (void**)&orig_XInputGetState},
     {"XInputGetKeystroke", 0, (void*)&fake_XInputGetKeystroke, (void**)&orig_XInputGetKeystroke},
 };
-OverrideInfo g_xinput_overrides = {"xinput1_\\d+\\.dll", _countof(g_xinput_funcs), g_xinput_funcs};
+wcOverrideInfo g_xinput_overrides = {"xinput1_\\d+\\.dll", _countof(g_xinput_funcs), g_xinput_funcs};

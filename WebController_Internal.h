@@ -1,5 +1,7 @@
 ﻿#ifndef WebController_Internal_h
 #define WebController_Internal_h
+#include <windows.h>
+#include <functional>
 
 // target: 関数ポインタ。対象関数を hotpatch して元の関数へのポインタを返す
 inline void* Hotpatch( void *target, const void *replacement )
@@ -126,35 +128,44 @@ inline void* OverrideDLLExportByName(HMODULE module, const char *funcname, void 
     }
     return NULL;
 }
-// ordinal 指定版
-inline void* OverrideDLLExportByOrdinal(HMODULE module, DWORD func_ordinal, void *replacement)
+
+inline size_t GetModulePath(char *out_path, size_t len)
 {
-    if(!IsValidMemory(module)) { return NULL; }
+    HMODULE mod = 0;
+    ::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)&GetModulePath, &mod);
+    DWORD size = ::GetModuleFileNameA(mod, out_path, len);
+    return size;
+}
 
-    size_t ImageBase = (size_t)module;
-    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-    if(pDosHeader->e_magic!=IMAGE_DOS_SIGNATURE) { return NULL; }
-
-    PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)(ImageBase + pDosHeader->e_lfanew);
-    DWORD RVAExports = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-    if(RVAExports==0) { return NULL; }
-
-    IMAGE_EXPORT_DIRECTORY *pExportDirectory = (IMAGE_EXPORT_DIRECTORY *)(ImageBase + RVAExports);
-    DWORD *RVANames = (DWORD*)(ImageBase+pExportDirectory->AddressOfNames);
-    WORD *RVANameOrdinals = (WORD*)(ImageBase+pExportDirectory->AddressOfNameOrdinals);
-    DWORD *RVAFunctions = (DWORD*)(ImageBase+pExportDirectory->AddressOfFunctions);
-    for(DWORD i=0; i<pExportDirectory->NumberOfFunctions; ++i) {
-        if(RVANameOrdinals[i]==func_ordinal) {
-            void *before = (void*)(ImageBase+RVAFunctions[RVANameOrdinals[i]]);
-            ForceWrite<DWORD>(RVAFunctions[RVANameOrdinals[i]], (DWORD)replacement - ImageBase);
-            return before;
+inline char* GetModuleFileName(char *out_path, size_t len)
+{
+    size_t size = ::GetModulePath(out_path, len);
+    while(size>0) {
+        if(out_path[size]=='\\') {
+            out_path[size] = '\0';
+            return &out_path[size+1];
         }
+        --size;
+    }
+    return NULL;
+}
+
+inline char* GetModuleDirectory(char *out_path, size_t len)
+{
+    size_t size = ::GetModulePath(out_path, len);
+    while(size>0) {
+        if(out_path[size]=='\\') {
+            out_path[size+1] = '\0';
+            return out_path;
+        }
+        --size;
     }
     return NULL;
 }
 
 
-struct FuncInfo
+
+struct wcFuncInfo
 {
     const char *name;
     DWORD ordinal;
@@ -162,11 +173,11 @@ struct FuncInfo
     void **func_orig;
 };
 
-struct OverrideInfo
+struct wcOverrideInfo
 {
     const char *dllname;
     const size_t num_funcs;
-    FuncInfo *funcs;
+    wcFuncInfo *funcs;
 };
 
 #endif // WebController_Internal_h
