@@ -31,7 +31,7 @@ static void OverrideExports(HMODULE mod)
             for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
                 wcFuncInfo &finfo = oinfo.funcs[fi];
                 if(finfo.name!=NULL) {
-                    void *orig = OverrideDLLExportByName(mod, finfo.name, finfo.func);
+                    void *orig = OverrideDLLExport(mod, finfo.name, finfo.func);
                     if(*finfo.func_orig==NULL) { *finfo.func_orig=orig; }
                 }
             }
@@ -43,7 +43,7 @@ static void OverrideImports()
 {
     for(size_t mi=0; mi<_countof(g_overrides); ++mi) {
         wcOverrideInfo &oinfo = *g_overrides[mi];
-        EachImportFunctionInEveryModule(oinfo.dllname,
+        EnumerateDLLImportsEveryModule(oinfo.dllname,
             [&](const char *funcname, void *&func) {
                 for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
                     wcFuncInfo &finfo = oinfo.funcs[fi];

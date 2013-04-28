@@ -47,7 +47,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev, LPWSTR cmd, int show)
         BOOL ret = ::CreateProcessA(exePath, NULL, NULL, NULL, FALSE,
             NORMAL_PRIORITY_CLASS|CREATE_SUSPENDED, NULL, NULL, &si, &pi);
         if(ret) {
-            std::string dll = std::string(GetModuleDirectory(dllPath, MAX_PATH))+"WebController.dll";
+            GetModuleDirectory(dllPath, MAX_PATH);
+            std::string dll = std::string(dllPath)+"WebController.dll";
             InjectDLL(pi.hProcess, dll.c_str());
             ::ResumeThread(pi.hThread);
         }

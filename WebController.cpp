@@ -81,11 +81,10 @@ static const MIME s_mime_types[] = {
 static const char* GetCurrentModuleDirectory()
 {
     static char s_path[MAX_PATH] = {0};
-    static char *s_dir = NULL;
-    if(s_dir==NULL) {
-        s_dir = GetModuleDirectory(s_path, MAX_PATH);
+    if(s_path[0]=='\0') {
+        GetModuleDirectory(s_path, MAX_PATH);
     }
-    return s_dir;
+    return s_path;
 }
 
 

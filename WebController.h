@@ -15,6 +15,7 @@ typedef unsigned short  uint16;
 typedef unsigned int    uint32;
 
 extern "C" {
+
     struct wcConfig
     {
         bool override_user32;

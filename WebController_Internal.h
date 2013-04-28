@@ -31,14 +31,12 @@ inline bool IsValidMemory(void *p)
 {
     if(p==NULL) { return false; }
     MEMORY_BASIC_INFORMATION meminfo;
-    if(::VirtualQuery(p, &meminfo, sizeof(meminfo))==0 || meminfo.State==MEM_FREE) { return false; }
-    return true;
+    return ::VirtualQuery(p, &meminfo, sizeof(meminfo))!=0 && meminfo.State!=MEM_FREE;
 }
 
-// F1: [](const char *funcname, void *&func) {...}
-// F2: [](DWORD ordinal, void *&func) {...}
-template<class F1, class F2>
-inline void EnumerateDLLImports(HMODULE module, const char *dllfilter, const F1 &f1, const F2 &f2)
+inline void EnumerateDLLImports(HMODULE module, const char *dllfilter,
+    const std::function<void (const char*, void *&)> &f1,
+    const std::function<void (DWORD ordinal, void *&func)> &f2 )
 {
     if(!IsValidMemory(module)) { return; }
 
@@ -74,14 +72,15 @@ inline void EnumerateDLLImports(HMODULE module, const char *dllfilter, const F1 
     }
     return;
 }
-template<class F1>
-inline void EnumerateDLLImports(HMODULE module, const char *dllfilter, const F1 &f1)
+inline void EnumerateDLLImports(HMODULE module, const char *dllfilter,
+    const std::function<void (const char*, void *&)> &f1 )
 {
     EnumerateDLLImports(module, dllfilter, f1, [](DWORD ordinal, void *&func){});
 }
 
-template<class F1, class F2>
-inline void EachImportFunctionInEveryModule(const char *dllfilter, const F1 &f1, const F2 &f2)
+inline void EnumerateDLLImportsEveryModule(const char *dllfilter,
+    const std::function<void (const char*, void *&)> &f1,
+    const std::function<void (DWORD ordinal, void *&func)> &f2 )
 {
     std::vector<HMODULE> modules;
     DWORD num_modules;
@@ -92,17 +91,17 @@ inline void EachImportFunctionInEveryModule(const char *dllfilter, const F1 &f1,
         EnumerateDLLImports(modules[i], dllfilter, f1, f2);
     }
 }
-template<class F1>
-inline void EachImportFunctionInEveryModule(const char *dllfilter, const F1 &f1)
+inline void EnumerateDLLImportsEveryModule(const char *dllfilter,
+    const std::function<void (const char*, void *&)> &f1 )
 {
-    EachImportFunctionInEveryModule(dllfilter, f1, [](DWORD ordinal, void *&func){});
+    EnumerateDLLImportsEveryModule(dllfilter, f1, [](DWORD ordinal, void *&func){});
 }
 
 
 // dll が export している関数 (への RVA) を書き換える
 // それにより、GetProcAddress() が返す関数をすり替える
 // 元の関数へのポインタを返す
-inline void* OverrideDLLExportByName(HMODULE module, const char *funcname, void *replacement)
+inline void* OverrideDLLExport(HMODULE module, const char *funcname, void *replacement)
 {
     if(!IsValidMemory(module)) { return NULL; }
 
@@ -137,33 +136,32 @@ inline size_t GetModulePath(char *out_path, size_t len)
     return size;
 }
 
-inline char* GetModuleFileName(char *out_path, size_t len)
+inline bool GetModuleFileName(char *out_path, size_t len)
 {
-    size_t size = ::GetModulePath(out_path, len);
+    char tmp[MAX_PATH];
+    size_t size = ::GetModulePath(tmp, MAX_PATH);
     while(size>0) {
-        if(out_path[size]=='\\') {
-            out_path[size] = '\0';
-            return &out_path[size+1];
+        if(tmp[size]=='\\') {
+            strcpy_s(out_path, len, tmp+size+1);
+            return true;
         }
         --size;
     }
-    return NULL;
+    return false;
 }
 
-inline char* GetModuleDirectory(char *out_path, size_t len)
+inline bool GetModuleDirectory(char *out_path, size_t len)
 {
     size_t size = ::GetModulePath(out_path, len);
     while(size>0) {
         if(out_path[size]=='\\') {
             out_path[size+1] = '\0';
-            return out_path;
+            return true;
         }
         --size;
     }
-    return NULL;
+    return false;
 }
-
-
 
 struct wcFuncInfo
 {
@@ -179,5 +177,6 @@ struct wcOverrideInfo
     const size_t num_funcs;
     wcFuncInfo *funcs;
 };
+
 
 #endif // WebController_Internal_h
