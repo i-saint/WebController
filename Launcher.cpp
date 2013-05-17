@@ -5,6 +5,12 @@
 #include "WebController.h"
 #include "WebController_Internal.h"
 
+#ifdef _WIN64
+#   define dll_name "WebController64.dll"
+#else // _WIN64
+#   define dll_name "WebController.dll"
+#endif // _WIN64
+
 // VirtualAllocEx で dll の path を対象プロセスに書き込み、
 // CreateRemoteThread で対象プロセスにスレッドを作って、↑で書き込んだ dll path をパラメータにして LoadLibraryA を呼ぶ。
 // 結果、対象プロセス内で任意の dll を実行させる。 
@@ -52,7 +58,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev, LPWSTR cmd, int show)
             NORMAL_PRIORITY_CLASS|CREATE_SUSPENDED, NULL, NULL, &si, &pi);
         if(ret) {
             GetModuleDirectory(dllPath, MAX_PATH);
-            std::string dll = std::string(dllPath)+"WebController.dll";
+            std::string dll = std::string(dllPath) + dll_name;
             InjectDLL(pi.hProcess, dll.c_str());
             ::ResumeThread(pi.hThread);
         }
