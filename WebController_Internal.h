@@ -1,4 +1,8 @@
-﻿#ifndef WebController_Internal_h
+﻿// created by i-saint
+// distributed under Creative Commons Attribution (CC BY) license.
+// https://github.com/i-saint/WebController
+
+#ifndef WebController_Internal_h
 #define WebController_Internal_h
 #include <windows.h>
 #include <functional>

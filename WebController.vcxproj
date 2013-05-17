@@ -30,6 +30,9 @@
     <ClInclude Include="WebController.h" />
     <ClInclude Include="WebController_Internal.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="html\index.html" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7CCD61E5-5F56-4050-BACC-1467972D2247}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>

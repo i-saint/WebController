@@ -1,4 +1,8 @@
-﻿#ifndef WebController_h
+﻿// created by i-saint
+// distributed under Creative Commons Attribution (CC BY) license.
+// https://github.com/i-saint/WebController
+
+#ifndef WebController_h
 #define WebController_h
 #pragma comment(lib, "psapi.lib")
 #include <windows.h>

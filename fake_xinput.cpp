@@ -1,4 +1,8 @@
-﻿#include <windows.h>
+﻿// created by i-saint
+// distributed under Creative Commons Attribution (CC BY) license.
+// https://github.com/i-saint/WebController
+
+#include <windows.h>
 #include <xinput.h>
 #include "WebController.h"
 #include "WebController_Internal.h"
