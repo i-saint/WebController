@@ -18,17 +18,17 @@ bool InjectDLL(HANDLE hProcess, const char* dllname)
 {
     SIZE_T bytesRet = 0;
     DWORD oldProtect = 0;
-    LPVOID remote_addr = NULL;
-    HANDLE hThread = NULL;
+    LPVOID remote_addr = nullptr;
+    HANDLE hThread = nullptr;
     size_t len = strlen(dllname) + 1;
 
     remote_addr = ::VirtualAllocEx(hProcess, 0, 1024, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    if(remote_addr==NULL) { return false; }
+    if(remote_addr==nullptr) { return false; }
     ::VirtualProtectEx(hProcess, remote_addr, len, PAGE_EXECUTE_READWRITE, &oldProtect);
     ::WriteProcessMemory(hProcess, remote_addr, dllname, len, &bytesRet);
     ::VirtualProtectEx(hProcess, remote_addr, len, oldProtect, &oldProtect);
 
-    hThread = ::CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)((void*)&LoadLibraryA), remote_addr, 0, NULL);
+    hThread = ::CreateRemoteThread(hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)((void*)&LoadLibraryA), remote_addr, 0, nullptr);
     ::WaitForSingleObject(hThread, INFINITE); 
     ::VirtualFreeEx(hProcess, remote_addr, 0, MEM_RELEASE);
     return true;
@@ -54,8 +54,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE prev, LPWSTR cmd, int show)
         ::ZeroMemory(&si, sizeof(si));
         ::ZeroMemory(&pi, sizeof(pi));
         si.cb = sizeof(si);
-        BOOL ret = ::CreateProcessA(exePath, NULL, NULL, NULL, FALSE,
-            NORMAL_PRIORITY_CLASS|CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+        BOOL ret = ::CreateProcessA(exePath, nullptr, nullptr, nullptr, FALSE,
+            NORMAL_PRIORITY_CLASS|CREATE_SUSPENDED, nullptr, nullptr, &si, &pi);
         if(ret) {
             GetModuleDirectory(dllPath, MAX_PATH);
             std::string dll = std::string(dllPath) + dll_name;

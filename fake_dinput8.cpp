@@ -49,7 +49,7 @@ static HRESULT __stdcall fake_CreateDevice(IDirectInput8 *di8, REFGUID guid, LPD
     HRESULT r = orig_CreateDevice(di8, guid, out, unk);
     if(SUCCEEDED(r)) {
         void **&vftable = ((void***)(*out))[0];
-        if(orig_GetDeviceState==NULL) { (void*&)orig_GetDeviceState=vftable[9]; }
+        if(orig_GetDeviceState==nullptr) { (void*&)orig_GetDeviceState=vftable[9]; }
         vftable[9] = &fake_GetDeviceState;
     }
     return r;
@@ -60,7 +60,7 @@ static HRESULT WINAPI fake_DirectInput8Create(HINSTANCE hinst, DWORD dwVersion, 
     HRESULT r = orig_DirectInput8Create(hinst, dwVersion, riidltf, ppvOut, punkOuter);
     if(SUCCEEDED(r)) {
         void **&vftable = ((void***)(*ppvOut))[0];
-        if(orig_CreateDevice==NULL) { (void*&)orig_CreateDevice=vftable[3]; }
+        if(orig_CreateDevice==nullptr) { (void*&)orig_CreateDevice=vftable[3]; }
         vftable[3] = &fake_CreateDevice;
         wcStartServer();
     }

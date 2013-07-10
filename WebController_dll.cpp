@@ -14,12 +14,16 @@ static wcOverrideInfo *g_overrides[] = {&g_user32_overrides, &g_winmm_overrides,
 
 typedef HMODULE (WINAPI *LoadLibraryAT)(LPCSTR lpFileName);
 typedef HMODULE (WINAPI *LoadLibraryWT)(LPWSTR lpFileName);
+typedef HMODULE (WINAPI *LoadLibraryExAT)(LPCSTR lpFileName, HANDLE hFile, DWORD dwFlags);
+typedef HMODULE (WINAPI *LoadLibraryExWT)(LPWSTR lpFileName, HANDLE hFile, DWORD dwFlags);
 static LoadLibraryAT orig_LoadLibraryA;
 static LoadLibraryWT orig_LoadLibraryW;
+static LoadLibraryExAT orig_LoadLibraryExA;
+static LoadLibraryExWT orig_LoadLibraryExW;
 
 static void OverrideExports(HMODULE mod)
 {
-    if(mod==NULL) { return; }
+    if(mod==nullptr) { return; }
 
     char pDLLpath[MAX_PATH] = {0};
     DWORD size = ::GetModuleFileNameA(mod, pDLLpath, MAX_PATH);
@@ -34,9 +38,9 @@ static void OverrideExports(HMODULE mod)
         if(std::regex_match(pDLLName, reg)) {
             for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
                 wcFuncInfo &finfo = oinfo.funcs[fi];
-                if(finfo.name!=NULL) {
+                if(finfo.name!=nullptr) {
                     void *orig = OverrideDLLExport(mod, finfo.name, finfo.func);
-                    if(*finfo.func_orig==NULL) { *finfo.func_orig=orig; }
+                    if(*finfo.func_orig==nullptr) { *finfo.func_orig=orig; }
                 }
             }
         }
@@ -51,9 +55,9 @@ static void OverrideImports()
             [&](const char *funcname, void *&func) {
                 for(size_t fi=0; fi<oinfo.num_funcs; ++fi) {
                     wcFuncInfo &finfo = oinfo.funcs[fi];
-                    if(finfo.name==NULL) { continue; }
+                    if(finfo.name==nullptr) { continue; }
                     if(strcmp(funcname, finfo.name)==0) {
-                        if(*finfo.func_orig==NULL) { *finfo.func_orig=func; }
+                        if(*finfo.func_orig==nullptr) { *finfo.func_orig=func; }
                         ForceWrite<void*>(func, finfo.func);
                     }
                 }
@@ -63,7 +67,7 @@ static void OverrideImports()
                     wcFuncInfo &finfo = oinfo.funcs[fi];
                     if(finfo.ordinal==0) { continue; }
                     if(finfo.ordinal==ordinal) {
-                        if(*finfo.func_orig==NULL) { *finfo.func_orig=func; }
+                        if(*finfo.func_orig==nullptr) { *finfo.func_orig=func; }
                         ForceWrite<void*>(func, finfo.func);
                     }
                 }
@@ -86,10 +90,34 @@ static HMODULE WINAPI fake_LoadLibraryW(LPWSTR lpFileName)
     return ret;
 }
 
+static HMODULE WINAPI fake_LoadLibraryExA(LPCSTR lpFileName, HANDLE hFile, DWORD dwFlags)
+{
+    HMODULE ret = orig_LoadLibraryExA(lpFileName, hFile, dwFlags);
+    OverrideExports(ret);
+    return ret;
+}
+
+static HMODULE WINAPI fake_LoadLibraryExW(LPWSTR lpFileName, HANDLE hFile, DWORD dwFlags)
+{
+    HMODULE ret = orig_LoadLibraryExW(lpFileName, hFile, dwFlags);
+    OverrideExports(ret);
+    return ret;
+}
+
+
 static void WebController_SetHooks()
 {
-    (void*&)orig_LoadLibraryA = Hotpatch(&LoadLibraryA, fake_LoadLibraryA);
-    (void*&)orig_LoadLibraryW = Hotpatch(&LoadLibraryW, fake_LoadLibraryW);
+    bool ok = false;
+    if(HMODULE kernelbase=::GetModuleHandleA("KernelBase.dll")) {
+        if(void *fp=GetProcAddress(kernelbase, "LoadLibraryExW")) {
+            (void*&)orig_LoadLibraryExW = Hotpatch(fp, fake_LoadLibraryExW);
+            ok = true;
+        }
+    }
+    if(!ok) {
+        (void*&)orig_LoadLibraryA = Hotpatch(&LoadLibraryA, fake_LoadLibraryA);
+        (void*&)orig_LoadLibraryW = Hotpatch(&LoadLibraryW, fake_LoadLibraryW);
+    }
     OverrideImports();
 }
 

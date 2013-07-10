@@ -33,7 +33,7 @@ inline void ForceWrite(T &dst, const T &src)
 
 inline bool IsValidMemory(void *p)
 {
-    if(p==NULL) { return false; }
+    if(p==nullptr) { return false; }
     MEMORY_BASIC_INFORMATION meminfo;
     return ::VirtualQuery(p, &meminfo, sizeof(meminfo))!=0 && meminfo.State!=MEM_FREE;
 }
@@ -88,7 +88,7 @@ inline void EnumerateDLLImportsEveryModule(const char *dllfilter,
 {
     std::vector<HMODULE> modules;
     DWORD num_modules;
-    ::EnumProcessModules(::GetCurrentProcess(), NULL, 0, &num_modules);
+    ::EnumProcessModules(::GetCurrentProcess(), nullptr, 0, &num_modules);
     modules.resize(num_modules/sizeof(HMODULE));
     ::EnumProcessModules(::GetCurrentProcess(), &modules[0], num_modules, &num_modules);
     for(size_t i=0; i<modules.size(); ++i) {
@@ -107,15 +107,15 @@ inline void EnumerateDLLImportsEveryModule(const char *dllfilter,
 // 元の関数へのポインタを返す
 inline void* OverrideDLLExport(HMODULE module, const char *funcname, void *replacement)
 {
-    if(!IsValidMemory(module)) { return NULL; }
+    if(!IsValidMemory(module)) { return nullptr; }
 
     size_t ImageBase = (size_t)module;
     PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)ImageBase;
-    if(pDosHeader->e_magic!=IMAGE_DOS_SIGNATURE) { return NULL; }
+    if(pDosHeader->e_magic!=IMAGE_DOS_SIGNATURE) { return nullptr; }
 
     PIMAGE_NT_HEADERS pNTHeader = (PIMAGE_NT_HEADERS)(ImageBase + pDosHeader->e_lfanew);
     DWORD RVAExports = pNTHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
-    if(RVAExports==0) { return NULL; }
+    if(RVAExports==0) { return nullptr; }
 
     IMAGE_EXPORT_DIRECTORY *pExportDirectory = (IMAGE_EXPORT_DIRECTORY *)(ImageBase + RVAExports);
     DWORD *RVANames = (DWORD*)(ImageBase+pExportDirectory->AddressOfNames);
@@ -129,7 +129,7 @@ inline void* OverrideDLLExport(HMODULE module, const char *funcname, void *repla
             return before;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 inline size_t GetModulePath(char *out_path, size_t len)

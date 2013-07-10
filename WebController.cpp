@@ -30,14 +30,14 @@ struct InputServerConfig
 class InputServer
 {
 public:
-    static void initializeInstance();
-    static void finalizeInstance();
+    static bool initializeInstance();
+    static bool finalizeInstance();
     static InputServer* getInstance();
 
     InputServer();
     ~InputServer();
-    void start();
-    void stop();
+    bool start();
+    bool stop();
     wcInputData& getState();
 
     bool endFlag() const { return m_end_flag; }
@@ -189,20 +189,23 @@ public:
 
 InputServer * InputServer::s_inst;
 
-void InputServer::initializeInstance()
+bool InputServer::initializeInstance()
 {
     if(!s_inst) {
         s_inst = new InputServer();
-        s_inst->start();
+        return s_inst->start();
     }
+    return false;
 }
 
-void InputServer::finalizeInstance()
+bool InputServer::finalizeInstance()
 {
     if(s_inst) {
         delete s_inst;
-        s_inst = NULL;
+        s_inst = nullptr;
+        return true;
     }
+    return false;
 }
 
 InputServer* InputServer::getInstance()
@@ -212,14 +215,14 @@ InputServer* InputServer::getInstance()
 
 
 InputServerConfig::InputServerConfig()
-    : port(10001)
+    : port(wcDefaultPort)
     , max_queue(100)
     , max_threads(4)
 {
 }
 
 InputServer::InputServer()
-    : m_server(NULL)
+    : m_server(nullptr)
     , m_end_flag(false)
 {
     memset(&m_state, 0, sizeof(m_state));
@@ -233,7 +236,7 @@ InputServer::~InputServer()
     stop();
 }
 
-void InputServer::start()
+bool InputServer::start()
 {
     if(!m_server) {
         Poco::Net::HTTPServerParams* params = new Poco::Net::HTTPServerParams;
@@ -245,13 +248,15 @@ void InputServer::start()
             Poco::Net::ServerSocket svs(m_conf.port);
             m_server = new Poco::Net::HTTPServer(new InputRequestHandlerFactory(), svs, params);
             m_server->start();
+            return true;
         }
         catch(Poco::IOException &) {
         }
     }
+    return false;
 }
 
-void InputServer::stop()
+bool InputServer::stop()
 {
     if(m_server) {
         m_end_flag = true;
@@ -260,8 +265,10 @@ void InputServer::stop()
             ::Sleep(1);
         }
         delete m_server;
-        m_server = NULL;
+        m_server = nullptr;
+        return true;
     }
+    return false;
 }
 
 wcInputData& InputServer::getState()
@@ -280,14 +287,20 @@ __declspec(dllexport) wcConfig*  wcGetConfig()
 
 __declspec(dllexport) bool wcStartServer()
 {
-    InputServer::initializeInstance();
-    return true;
+    if(InputServer::initializeInstance()) {
+        {
+            char url[256];
+            sprintf(url, "http://localhost:%d", wcDefaultPort);
+            ::ShellExecuteA(nullptr, "open", url, "", "", SW_SHOWDEFAULT);
+        }
+        return true;
+    }
+    return false;
 }
 
 __declspec(dllexport) bool wcStopServer()
 {
-    InputServer::finalizeInstance();
-    return true;
+    return InputServer::finalizeInstance();
 }
 
 __declspec(dllexport) wcInputData* wcGetData()
@@ -295,7 +308,7 @@ __declspec(dllexport) wcInputData* wcGetData()
     if(InputServer *server = InputServer::getInstance()) {
         return &server->getState();
     }
-    return NULL;
+    return nullptr;
 }
 
 } // extern "C"

@@ -4,9 +4,15 @@
 
 #ifndef WebController_h
 #define WebController_h
+
+#define wcDefaultPort 10001
+
+
 #pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "shell32.lib")
 #include <windows.h>
 #include <psapi.h>
+#include <shellapi.h>
 #include <stdint.h>
 #include <vector>
 #include <regex>
